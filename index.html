@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Observe and possible possition when invisible</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+<canvas></canvas>
+
+<script>
+  const canvas = document.querySelector('canvas')
+  canvas.width = window.innerWidth
+  canvas.height = window.innerHeight
+  const context = canvas.getContext('2d')
+
+  const positions = []
+  const numberOfPositions = 3
+  for (let i = 1; i <= 3; i++) {
+    positions.push(createPosition())
+  }
+
+  function createPosition() {
+    return {
+      x: randomInteger(0, canvas.width - 1),
+      y: randomInteger(0, canvas.height - 1),
+      lastSeenPosition: null,
+      maxMoveDistance: 0
+    }
+  }
+
+  function onTick() {
+    for (const position of positions) {
+      position.x = bound(0, position.x + randomInteger(-1, 1), canvas.width - 1)
+      position.y = bound(0, position.y + randomInteger(-1, 1), canvas.height - 1)
+      position.maxMoveDistance++
+    }
+
+    render()
+
+    scheduleNextTick()
+  }
+
+  function scheduleNextTick() {
+    setTimeout(onTick, 1000)
+  }
+
+  scheduleNextTick()
+
+  const visibleRadius = 200
+  let visiblePosition = null
+
+  window.addEventListener('mousemove', function (event) {
+    visiblePosition = {
+      x: event.clientX,
+      y: event.clientY
+    }
+
+    for (const position of positions) {
+      if (isPositionVisible(position)) {
+        position.lastSeenPosition = {
+          x: position.x,
+          y: position.y
+        }
+        position.maxMoveDistance = 0
+      }
+    }
+
+    render()
+  })
+
+  function isPositionVisible(position) {
+    return isInCircle(position, {...visiblePosition, radius: visibleRadius})
+  }
+
+  function render() {
+    context.fillStyle = 'black'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+
+    for (const position of positions) {
+      if (!isPositionVisible(position) && position.lastSeenPosition) {
+        context.fillStyle = 'blue'
+        context.beginPath()
+        context.arc(position.lastSeenPosition.x, position.lastSeenPosition.y, position.maxMoveDistance, 0, 2 * Math.PI)
+        context.fill()
+      }
+    }
+
+
+    if (visiblePosition) {
+      context.beginPath()
+      context.fillStyle = 'white'
+      context.arc(visiblePosition.x, visiblePosition.y, visibleRadius, 0, 2 * Math.PI)
+      context.fill()
+    }
+
+    for (const position of positions) {
+      if (isPositionVisible(position)) {
+        context.fillStyle = 'black'
+        context.fillRect(position.x, position.y, 1, 1)
+      }
+    }
+  }
+
+  function isInCircle(position, circle) {
+    return distance(position, circle) <= circle.radius
+  }
+
+  function distance(a, b) {
+    return Math.sqrt(
+      (b.x - a.x) ** 2 +
+      (b.y - a.y) ** 2
+    )
+  }
+
+  function bound(min, value, max) {
+    return Math.max(0, Math.min(value, max))
+  }
+
+  function randomInteger(min, max) {
+    min = Math.floor(min)
+    max = Math.floor(max)
+    return Math.floor(min + (max - min) * Math.random())
+  }
+</script>
+</body>
+</html>
